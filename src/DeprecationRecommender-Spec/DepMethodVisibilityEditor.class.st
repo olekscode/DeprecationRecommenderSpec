@@ -4,6 +4,7 @@ Class {
 	#instVars : [
 		'publicMethodsBrowser',
 		'privateMethodsBrowser',
+		'summaryLabel',
 		'submitButton'
 	],
 	#category : #'DeprecationRecommender-Spec'
@@ -16,7 +17,7 @@ DepMethodVisibilityEditor class >> defaultSpec [
 		add: #publicMethodsBrowser;
 		add: #privateMethodsBrowser;
 		add: (SpBoxLayout newHorizontal
-			add: '';
+			add: #summaryLabel;
 			add: #submitButton width: self buttonWidth;
 			yourself) height: self buttonHeight;
 		yourself.
@@ -27,10 +28,12 @@ DepMethodVisibilityEditor >> connectPresenters [
 	super connectPresenters.
 	
 	publicMethodsBrowser whenDroppedMethodsAccepted: [ :acceptedMethods |
-		privateMethodsBrowser removeMethods: acceptedMethods ].
+		privateMethodsBrowser removeMethods: acceptedMethods.
+		self updateSummary ].
 	
 	privateMethodsBrowser whenDroppedMethodsAccepted: [ :acceptedMethods |
-		publicMethodsBrowser removeMethods: acceptedMethods ].
+		publicMethodsBrowser removeMethods: acceptedMethods.
+		self updateSummary ].
 	
 	
 ]
@@ -46,6 +49,8 @@ DepMethodVisibilityEditor >> initializePresenters [
 	privateMethodsBrowser := DepMethodsBrowser new
 		explanation: self privateMethodsExplanation;
 		yourself.
+		
+	summaryLabel := self newLabel.
 	
 	submitButton := self newButton
 		label: 'Submit';
@@ -60,7 +65,8 @@ DepMethodVisibilityEditor >> privateMethods [
 { #category : #'as yet unclassified' }
 DepMethodVisibilityEditor >> privateMethods: aCollectionOfMethods [
 	
-	privateMethodsBrowser methods: aCollectionOfMethods
+	privateMethodsBrowser methods: aCollectionOfMethods.
+	self updateSummary.
 ]
 
 { #category : #'as yet unclassified' }
@@ -77,11 +83,25 @@ DepMethodVisibilityEditor >> publicMethods [
 { #category : #'as yet unclassified' }
 DepMethodVisibilityEditor >> publicMethods: aCollectionOfMethods [
 	
-	publicMethodsBrowser methods: aCollectionOfMethods
+	publicMethodsBrowser methods: aCollectionOfMethods.
+	self updateSummary.
 ]
 
 { #category : #'as yet unclassified' }
 DepMethodVisibilityEditor >> publicMethodsExplanation [
 	
 	^ 'Methods that can be reused (public methods) -- drag and drop to edit'
+]
+
+{ #category : #'as yet unclassified' }
+DepMethodVisibilityEditor >> updateSummary [
+	
+	(publicMethodsBrowser methods isNil or: [ privateMethodsBrowser methods isNil ])
+		ifTrue: [ ^ self ].
+	
+	summaryLabel
+		label: ('{1} public and {2} private methods' format: {
+			publicMethodsBrowser methods size .
+			privateMethodsBrowser methods size
+		}).
 ]

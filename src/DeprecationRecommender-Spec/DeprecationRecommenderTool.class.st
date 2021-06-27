@@ -2,49 +2,26 @@ Class {
 	#name : #DeprecationRecommenderTool,
 	#superclass : #SpPresenter,
 	#instVars : [
-		'recommender',
-		'explanationLabel',
-		'groupCheckbox',
-		'recommendedDeprecationsNotebook',
-		'methodsList',
-		'classesList',
-		'methodsTree',
-		'classesTree',
-		'methodsPage',
-		'classesPage',
-		'code',
-		'generateButton',
-		'recommendationLabelLine1',
-		'recommendationLabelLine2'
+		'stepsList',
+		'mainArea',
+		'oldVersionSnapshot',
+		'projectHistory',
+		'newVersionSnapshot'
 	],
 	#category : #'DeprecationRecommender-Spec'
 }
 
 { #category : #accessing }
 DeprecationRecommenderTool class >> defaultExtent [
-	^ 900@700
+	^ 1300@600
 ]
 
 { #category : #specs }
 DeprecationRecommenderTool class >> defaultSpec [
 	^ SpBoxLayout newHorizontal
-		spacing: 2;
-		add: (SpBoxLayout newVertical
-			add: (SpBoxLayout newHorizontal
-				add: #explanationLabel;
-				add: #groupCheckbox width: 2 * self buttonWidth;
-				yourself) height: self buttonHeight;
-			add: #recommendedDeprecationsNotebook;
-			yourself) width: 300;
-		add: (SpBoxLayout newVertical
-			add: #recommendationLabelLine1 height: self buttonHeight;
-			add: #recommendationLabelLine2 height: self buttonHeight;
-			add: #code;
-			add: (SpBoxLayout newHorizontal
-				add: '';
-				add: #generateButton width: self buttonWidth;
-				yourself) height: self buttonHeight;
-			yourself);
+		spacing: 5;
+		add: #stepsList width: 300;
+		add: #mainArea;
 		yourself.
 ]
 
@@ -71,66 +48,128 @@ DeprecationRecommenderTool class >> open [
 ]
 
 { #category : #initialization }
-DeprecationRecommenderTool >> buildToolbar [
-	^ self toolbarActions 
-		asToolbarPresenterWith: [ :presenter | 
-			presenter 
-				displayMode: SpToolbarDisplayMode modeIconAndLabel;
-				addStyle: 'stToolbar' ]
-]
-
-{ #category : #initialization }
 DeprecationRecommenderTool >> connectPresenters [
 	super connectPresenters.
 	
-	recommendedDeprecationsNotebook whenSelectedPageChangedDo: [ :selectedPage |
-		explanationLabel label: selectedPage title ].
+	stepsList whenSelectionChangedDo: [ 
+		stepsList selectedItem ifNotNil: [
+			stepsList selectedItem markAsComplete. 
+			self showInMainArea: stepsList selectedItem presenterProvider value ] ].
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> defaultPrivateMethodsIn: aSnapshot [
+
+	^ aSnapshot methods select: [ :method |
+		VisibilityDeductor new isMethodPrivate: method ].
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> defaultPublicMethodsIn: aSnapshot [
+
+	^ aSnapshot methods reject: [ :method |
+		VisibilityDeductor new isMethodPrivate: method ].
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeExperimentSteps [
+
+	| steps |
 	
-	methodsList whenSelectionChangedDo: [ :selection |
-		methodsList selectedItem ifNotNil: [
-			self showSourceCodeFor: methodsList selectedItem ] ].
+	steps := {
+		self initializeLoadHistoryStep .
+		self initializeSelectPackagesStep .
+		self initializeOldApiStep .
+		self initializeNewApiStep .
+		self initializeRecommendedDeprecationsStep .
+		self initializeProposedReplacementsStep .
+		self initializeGenerateCodeStep
+	}.
+	
+	steps withIndexDo: [ :step :index |
+		step name: ('Step ', index asString, ': ', step name) ].
+	
+	^ steps
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeGenerateCodeStep [
+
+	^ DepExperimentStep new
+		name: 'Generate code';
+		yourself.
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeLoadHistoryStep [
+
+	^ DepExperimentStep new
+		name: 'Load project history';
+		yourself.
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeNewApiStep [
+
+	^ DepExperimentStep new
+		name: 'Define new API';
+		presenterProvider: [
+			DepMethodVisibilityEditor new
+				publicMethods: (self defaultPublicMethodsIn: newVersionSnapshot);
+				privateMethods: (self defaultPrivateMethodsIn: newVersionSnapshot);
+				yourself ];
+		yourself.
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeOldApiStep [
+
+	^ DepExperimentStep new
+		name: 'Define old API';
+		presenterProvider: [
+			DepMethodVisibilityEditor new
+				publicMethods: (self defaultPublicMethodsIn: oldVersionSnapshot);
+				privateMethods: (self defaultPrivateMethodsIn: oldVersionSnapshot);
+				yourself ];
+		yourself.
 ]
 
 { #category : #initialization }
 DeprecationRecommenderTool >> initializePresenters [
 	super initializePresenters.
 	
-	explanationLabel := self newLabel.
-	recommendationLabelLine1 := self newLabel.
-	recommendationLabelLine2 := self newLabel.
+	self loadDefaultProject.
 	
-	groupCheckbox := self newCheckBox
-		label: 'Group into packages';
-		yourself.
-	
-	recommendedDeprecationsNotebook := self newNotebook.
-	
-	methodsList := self newList.
-	classesList := self newList.
-	
-	methodsTree := self newTree.
-	classesTree := self newTree.
-	
-	methodsPage := self newNotebookPage
-		title: 'Methods';
-		presenterProvider: [ methodsList ];
+	stepsList := self newList
+		displayIcon: [ :step | step icon ];
+		display: [ :step | step name ];
+		items: self initializeExperimentSteps;
 		yourself.
 		
-	classesPage := self newNotebookPage
-		title: 'Classes';
-		presenterProvider: [ classesList ];
+	mainArea := self newNullPresenter.
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeProposedReplacementsStep [
+
+	^ DepExperimentStep new
+		name: 'Review the proposed replacements';
 		yourself.
-		
-	recommendedDeprecationsNotebook
-		addPage: methodsPage;
-		addPage: classesPage.
-	
-	code := self newCode
-		withoutLineNumbers;
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeRecommendedDeprecationsStep [
+
+	^ DepExperimentStep new
+		name: 'Review the recommended deprecations';
 		yourself.
-	
-	generateButton := self newButton
-		label: 'Generate';
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> initializeSelectPackagesStep [
+
+	^ DepExperimentStep new
+		name: 'Select packages';
 		yourself.
 ]
 
@@ -140,42 +179,53 @@ DeprecationRecommenderTool >> initializeWindow: aWindowPresenter [
 	
 	aWindowPresenter
 		title: self class defaultTitle;
-		initialExtent: self class defaultExtent;
-		toolbar: self buildToolbar.
+		initialExtent: self class defaultExtent.
 ]
 
 { #category : #'as yet unclassified' }
-DeprecationRecommenderTool >> onProjectLoaded: aRepository oldVersion: aCommitSha [
-	recommender := DeprecationRecommender new
-		repositoryName: aRepository name
-		oldVersion: aCommitSha
-		newVersion: aRepository head commit id;
-		yourself.
+DeprecationRecommenderTool >> loadDefaultProject [
+
+	| dir newVersionSnapshotFile oldVersionSnapshotFile projectHistoryFile |
+
+	dir := '/Users/oleks/Documents/tmp/clio' asFileReference.
+	newVersionSnapshotFile := dir / 'dataFrame-newVersionSnapshot.json'.
+	oldVersionSnapshotFile := dir / 'dataFrame-oldVersionSnapshot.json'.
+	projectHistoryFile := dir / 'dataFrame-history.json'.
+	
+	newVersionSnapshot := ClioSnapshot readFromJsonFile: newVersionSnapshotFile.
+	oldVersionSnapshot := ClioSnapshot readFromJsonFile: oldVersionSnapshotFile.
+	projectHistory := ClioHistory readFromJsonFile: projectHistoryFile.
+]
+
+{ #category : #initialization }
+DeprecationRecommenderTool >> showInMainArea: aPresenter [
+
+	mainArea := aPresenter.
+	self rebuildLayout.
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> showVisibilityEditor [
+
+	| dir newVersionSnapshotFile newVersionSnapshot publicMethods privateMethods |
+
+	dir := '/Users/oleks/Documents/tmp/clio' asFileReference.
+	newVersionSnapshotFile := dir / 'dataFrame-newVersionSnapshot.json'.
+
+	newVersionSnapshot := ClioSnapshot readFromJsonFile: newVersionSnapshotFile.
+
+	publicMethods := OrderedCollection new.
+	privateMethods := OrderedCollection new.
+
+	newVersionSnapshot methods do: [ :method |
+		(VisibilityDeductor new isMethodPrivate: method)
+			ifTrue: [ privateMethods add: method ]
+			ifFalse: [ publicMethods add: method ] ].
+
+	self showInMainArea: ((self instantiate: DepMethodVisibilityEditor)
+		publicMethods: publicMethods;
+		privateMethods: privateMethods;
+		yourself).
 		
-	self showMethods.
-]
-
-{ #category : #'as yet unclassified' }
-DeprecationRecommenderTool >> showMethods [
-	methodsList
-		items: recommender methodsToDeprecate asArray;
-		display: [ :method | method signature ].
-]
-
-{ #category : #'as yet unclassified' }
-DeprecationRecommenderTool >> showSourceCodeFor: aMethod [
-	code
-		text: aMethod sourceCode;
-		beForBehavior: (self class environment at: aMethod methodClass name).
-]
-
-{ #category : #building }
-DeprecationRecommenderTool >> toolbarActions [
-	^ CmCommandGroup forSpec
-		register: (CmCommandGroup forSpec
-			register: (DepLoadProjectCommand forSpecContext: self);
-			register: (DepOpenCommand forSpecContext: self);
-			register: (DepSaveCommand forSpecContext: self);
-			yourself);
-		yourself
+	self rebuildLayout.
 ]
