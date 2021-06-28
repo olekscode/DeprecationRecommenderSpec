@@ -105,6 +105,7 @@ DeprecationRecommenderTool >> initializeLoadHistoryStep [
 
 	^ DepExperimentStep new
 		name: 'Load project history';
+		presenterProvider: [ DepProjectHistoryLoader new ]
 		yourself.
 ]
 
