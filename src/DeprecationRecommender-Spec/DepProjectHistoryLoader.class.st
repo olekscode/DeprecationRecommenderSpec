@@ -8,7 +8,7 @@ Class {
 		'loadFromFileSystemButton',
 		'placeholder'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Views'
 }
 
 { #category : #specs }

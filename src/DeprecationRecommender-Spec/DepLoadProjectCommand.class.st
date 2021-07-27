@@ -1,7 +1,7 @@
 Class {
 	#name : #DepLoadProjectCommand,
 	#superclass : #DepCommand,
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Commands'
 }
 
 { #category : #accessing }

@@ -6,7 +6,7 @@ Class {
 		'presenterProvider',
 		'isComplete'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Models'
 }
 
 { #category : #accessing }

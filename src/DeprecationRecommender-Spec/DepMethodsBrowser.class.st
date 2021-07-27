@@ -14,7 +14,7 @@ Class {
 		'selectedMethods',
 		'onDroppedMethodsAcceptedCallback'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Views'
 }
 
 { #category : #specs }

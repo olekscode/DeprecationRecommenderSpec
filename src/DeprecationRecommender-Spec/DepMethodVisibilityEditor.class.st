@@ -7,7 +7,7 @@ Class {
 		'summaryLabel',
 		'submitButton'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Commands'
 }
 
 { #category : #specs }

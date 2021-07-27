@@ -1,5 +1,5 @@
 Class {
 	#name : #DepCommand,
 	#superclass : #StCommand,
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Commands'
 }

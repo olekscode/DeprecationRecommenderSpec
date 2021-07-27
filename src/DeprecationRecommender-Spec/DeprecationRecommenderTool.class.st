@@ -3,12 +3,14 @@ Class {
 	#superclass : #SpPresenter,
 	#instVars : [
 		'stepsList',
+		'listTreeViewButton',
 		'mainArea',
-		'oldVersionSnapshot',
-		'projectHistory',
-		'newVersionSnapshot'
+		'deprecationRecommender',
+		'isListView',
+		'missingMethodsView',
+		'missingMethods'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Views'
 }
 
 { #category : #accessing }
@@ -20,6 +22,13 @@ DeprecationRecommenderTool class >> defaultExtent [
 DeprecationRecommenderTool class >> defaultSpec [
 	^ SpBoxLayout newHorizontal
 		spacing: 5;
+		add: (SpBoxLayout newVertical
+			add: (SpBoxLayout newHorizontal
+				add: 'Missing methods';
+				add: #listTreeViewButton width: 80;
+				yourself) height: self buttonHeight;
+			add: #missingMethodsView;
+			yourself) width: 250;
 		add: #stepsList width: 300;
 		add: #mainArea;
 		yourself.
@@ -48,8 +57,25 @@ DeprecationRecommenderTool class >> open [
 ]
 
 { #category : #initialization }
+DeprecationRecommenderTool >> buildToolbar [
+	^ self toolbarActions 
+		asToolbarPresenterWith: [ :presenter | 
+			presenter 
+				displayMode: SpToolbarDisplayMode modeIconAndLabel;
+				addStyle: 'stToolbar' ]
+]
+
+{ #category : #initialization }
 DeprecationRecommenderTool >> connectPresenters [
 	super connectPresenters.
+	
+	listTreeViewButton action: [
+		self toggleListTreeView ].
+	
+	missingMethodsView whenSelectionChangedDo: [ 
+		missingMethodsView selectedItem ifNotNil: [ :item |
+			item class = DepMethodModel
+				ifTrue: [ item review markAsComplete ] ] ].
 	
 	stepsList whenSelectionChangedDo: [ 
 		stepsList selectedItem ifNotNil: [
@@ -116,8 +142,8 @@ DeprecationRecommenderTool >> initializeNewApiStep [
 		name: 'Define new API';
 		presenterProvider: [
 			DepMethodVisibilityEditor new
-				publicMethods: (self defaultPublicMethodsIn: newVersionSnapshot);
-				privateMethods: (self defaultPrivateMethodsIn: newVersionSnapshot);
+				publicMethods: (self defaultPublicMethodsIn: deprecationRecommender newVersionSnapshot);
+				privateMethods: (self defaultPrivateMethodsIn: deprecationRecommender newVersionSnapshot);
 				yourself ];
 		yourself.
 ]
@@ -129,8 +155,8 @@ DeprecationRecommenderTool >> initializeOldApiStep [
 		name: 'Define old API';
 		presenterProvider: [
 			DepMethodVisibilityEditor new
-				publicMethods: (self defaultPublicMethodsIn: oldVersionSnapshot);
-				privateMethods: (self defaultPrivateMethodsIn: oldVersionSnapshot);
+				publicMethods: (self defaultPublicMethodsIn: deprecationRecommender oldVersionSnapshot);
+				privateMethods: (self defaultPrivateMethodsIn: deprecationRecommender oldVersionSnapshot);
 				yourself ];
 		yourself.
 ]
@@ -139,7 +165,9 @@ DeprecationRecommenderTool >> initializeOldApiStep [
 DeprecationRecommenderTool >> initializePresenters [
 	super initializePresenters.
 	
-	self loadDefaultProject.
+	listTreeViewButton := self newButton.
+		
+	missingMethodsView := self newNullPresenter.
 	
 	stepsList := self newList
 		displayIcon: [ :step | step icon ];
@@ -148,6 +176,11 @@ DeprecationRecommenderTool >> initializePresenters [
 		yourself.
 		
 	mainArea := self newNullPresenter.
+	
+	isListView := false.
+	
+	self loadDefaultProject.
+	self showMissingMethodsAsTree.
 ]
 
 { #category : #initialization }
@@ -180,7 +213,8 @@ DeprecationRecommenderTool >> initializeWindow: aWindowPresenter [
 	
 	aWindowPresenter
 		title: self class defaultTitle;
-		initialExtent: self class defaultExtent.
+		initialExtent: self class defaultExtent;
+		toolbar: self buildToolbar.
 ]
 
 { #category : #'as yet unclassified' }
@@ -193,9 +227,27 @@ DeprecationRecommenderTool >> loadDefaultProject [
 	oldVersionSnapshotFile := dir / 'dataFrame-oldVersionSnapshot.json'.
 	projectHistoryFile := dir / 'dataFrame-history.json'.
 	
-	newVersionSnapshot := ClioSnapshot readFromJsonFile: newVersionSnapshotFile.
-	oldVersionSnapshot := ClioSnapshot readFromJsonFile: oldVersionSnapshotFile.
-	projectHistory := ClioHistory readFromJsonFile: projectHistoryFile.
+	self
+		loadProjectHistory: (ClioHistory readFromJsonFile: projectHistoryFile)
+		oldVersionSnapshot: (ClioSnapshot readFromJsonFile: oldVersionSnapshotFile)
+		newVersionSnapshot: (ClioSnapshot readFromJsonFile: newVersionSnapshotFile).
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> loadProjectHistory: aHistory oldVersionSnapshot: anOldVersion newVersionSnapshot: aNewVersion [
+	
+	deprecationRecommender := DeprecationRecommender new
+		projectHistory: aHistory;
+		oldVersionSnapshot: anOldVersion;
+		newVersionSnapshot: aNewVersion;
+		yourself.
+		
+	missingMethods := deprecationRecommender methodsToDeprecate collect: [ :each |
+		DepMethodModel new
+			method: each;
+			yourself ].
+		
+	self showMissingMethods.
 ]
 
 { #category : #initialization }
@@ -203,6 +255,62 @@ DeprecationRecommenderTool >> showInMainArea: aPresenter [
 
 	mainArea := aPresenter.
 	self rebuildLayout.
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> showMissingMethods [
+	isListView
+		ifTrue: [ self showMissingMethodsAsList ]
+		ifFalse: [ self showMissingMethodsAsTree ].
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> showMissingMethodsAsList [
+	listTreeViewButton
+		label: 'List View';
+		icon: (self iconNamed: #smallJustified).
+		
+	missingMethodsView := self newList
+		display: [ :method | method signature ];
+		displayIcon: [ :method | method icon ];
+		yourself.
+		
+	self rebuildLayout.
+	
+	missingMethods ifNotNil: [
+		missingMethodsView items:
+			(missingMethods sorted: [ :a :b | a signature < b signature ]) ].
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> showMissingMethodsAsTree [
+	| classes classModel |
+	
+	listTreeViewButton
+		label: 'Tree View';
+		icon: (self iconNamed: #merge).
+	
+	missingMethodsView := self newTree
+		display: [ :each | each name ];
+		displayIcon: [ :each | each icon ];
+		children: [ :each | each children ];
+		yourself.
+		
+	self rebuildLayout.
+	
+	missingMethods ifNil: [ ^ self ].
+	classes := Dictionary new.
+		
+	missingMethods do: [ :method |
+		classModel := classes at: method methodClass name ifAbsentPut: [
+			DepClassModel new
+				class: method methodClass;
+				yourself ].
+					
+		classModel methods add: method ].
+		
+	classes values do: [ :each | each methods sort: [ :a :b | a name < b name ] ].
+	missingMethodsView items: classes.
 ]
 
 { #category : #'as yet unclassified' }
@@ -229,4 +337,20 @@ DeprecationRecommenderTool >> showVisibilityEditor [
 		yourself).
 		
 	self rebuildLayout.
+]
+
+{ #category : #'as yet unclassified' }
+DeprecationRecommenderTool >> toggleListTreeView [
+	isListView := isListView not.
+	self showMissingMethods.
+]
+
+{ #category : #building }
+DeprecationRecommenderTool >> toolbarActions [
+	^ CmCommandGroup forSpec
+		register: (CmCommandGroup forSpec
+			register: (DepOpenCommand forSpecContext: self);
+			register: (DepSaveCommand forSpecContext: self);
+			yourself);
+		yourself
 ]

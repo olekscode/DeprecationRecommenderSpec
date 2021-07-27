@@ -7,7 +7,7 @@ Class {
 		'commits',
 		'callback'
 	],
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Views'
 }
 
 { #category : #accessing }

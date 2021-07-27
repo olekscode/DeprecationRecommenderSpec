@@ -1,7 +1,7 @@
 Class {
 	#name : #DepOpenCommand,
 	#superclass : #DepCommand,
-	#category : #'DeprecationRecommender-Spec'
+	#category : #'DeprecationRecommender-Spec-Commands'
 }
 
 { #category : #accessing }
