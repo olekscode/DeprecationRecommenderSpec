@@ -1,5 +1,5 @@
 Class {
-	#name : #DepMethodReview,
+	#name : #DepReview,
 	#superclass : #Object,
 	#instVars : [
 		'acceptedRefactorings',
@@ -15,19 +15,19 @@ Class {
 }
 
 { #category : #accessing }
-DepMethodReview >> initialize [
+DepReview >> initialize [
 	super initialize.
 	isComplete := false.
 ]
 
 { #category : #accessing }
-DepMethodReview >> isComplete [
+DepReview >> isComplete [
 
 	^ isComplete 
 ]
 
 { #category : #accessing }
-DepMethodReview >> markAsComplete [
+DepReview >> markAsComplete [
 	
 	isComplete := true.
 ]

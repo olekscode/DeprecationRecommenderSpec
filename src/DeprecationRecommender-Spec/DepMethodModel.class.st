@@ -2,8 +2,6 @@ Class {
 	#name : #DepMethodModel,
 	#superclass : #Object,
 	#instVars : [
-		'method',
-		'blamedCommit',
 		'recommendation',
 		'review'
 	],
@@ -25,29 +23,30 @@ DepMethodModel >> icon [
 { #category : #initialization }
 DepMethodModel >> initialize [
 	super initialize.
-	recommendation := DepMethodRecommendation new.
-	review := DepMethodReview new.
+	review := DepReview new.
 ]
 
 { #category : #accessing }
-DepMethodModel >> method: anObject [
-	method := anObject
-]
+DepMethodModel >> methodClassName [
 
-{ #category : #accessing }
-DepMethodModel >> methodClass [
-	^ method methodClass
+	^ recommendation method fullClassName 
 ]
 
 { #category : #accessing }
 DepMethodModel >> name [
-	^ method selector
+	^ recommendation method selector
 ]
 
 { #category : #accessing }
 DepMethodModel >> recommendation [
 
 	^ recommendation
+]
+
+{ #category : #accessing }
+DepMethodModel >> recommendation: anObject [
+
+	recommendation := anObject
 ]
 
 { #category : #accessing }
@@ -58,5 +57,5 @@ DepMethodModel >> review [
 
 { #category : #accessing }
 DepMethodModel >> signature [
-	^ method signature
+	^ recommendation method signature
 ]

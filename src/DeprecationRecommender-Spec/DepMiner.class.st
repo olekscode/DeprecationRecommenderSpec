@@ -104,31 +104,21 @@ DepMiner >> initializeWindow: aWindowPresenter [
 { #category : #'as yet unclassified' }
 DepMiner >> loadDefaultProject [
 
-	| dir newVersionSnapshotFile oldVersionSnapshotFile projectHistoryFile |
+	| dir recommendationsFile recommendations |
 
-	dir := '/Users/oleks/Documents/tmp/clio' asFileReference.
-	newVersionSnapshotFile := dir / 'dataFrame-newVersionSnapshot.json'.
-	oldVersionSnapshotFile := dir / 'dataFrame-oldVersionSnapshot.json'.
-	projectHistoryFile := dir / 'dataFrame-history.json'.
+	dir := '/Users/oleks/Documents/tmp/clio/DataFrame' asFileReference.
+	recommendationsFile := dir / 'recommendations.json'.
 	
-	self
-		loadProjectHistory: (ClioHistory readFromJsonFile: projectHistoryFile)
-		oldVersionSnapshot: (ClioSnapshot readFromJsonFile: oldVersionSnapshotFile)
-		newVersionSnapshot: (ClioSnapshot readFromJsonFile: newVersionSnapshotFile).
+	recommendations := DepRecommendations readFromJsonFile: recommendationsFile.
+	self loadRecommendations: recommendations.
 ]
 
 { #category : #'as yet unclassified' }
-DepMiner >> loadProjectHistory: aHistory oldVersionSnapshot: anOldVersion newVersionSnapshot: aNewVersion [
-	
-	deprecationRecommender := DepRecommender new
-		projectHistory: aHistory;
-		oldVersionSnapshot: anOldVersion;
-		newVersionSnapshot: aNewVersion;
-		yourself.
+DepMiner >> loadRecommendations: aCollectionOfRecommendations [
 		
-	missingMethods := deprecationRecommender methodsToDeprecate collect: [ :each |
+	missingMethods := aCollectionOfRecommendations collect: [ :each |
 		DepMethodModel new
-			method: each;
+			recommendation: each;
 			yourself ].
 		
 	self showMissingMethods.
@@ -196,9 +186,9 @@ DepMiner >> showMissingMethodsAsTree [
 	classes := Dictionary new.
 		
 	missingMethods do: [ :method |
-		classModel := classes at: method methodClass name ifAbsentPut: [
+		classModel := classes at: method methodClassName ifAbsentPut: [
 			DepClassModel new
-				class: method methodClass;
+				className: method methodClassName;
 				yourself ].
 					
 		classModel methods add: method ].

@@ -2,7 +2,7 @@ Class {
 	#name : #DepClassModel,
 	#superclass : #Object,
 	#instVars : [
-		'aClass',
+		'className',
 		'methods'
 	],
 	#category : #'DeprecationRecommender-Spec-Models'
@@ -14,8 +14,9 @@ DepClassModel >> children [
 ]
 
 { #category : #'instance creation' }
-DepClassModel >> class: anObject [
-	aClass := anObject
+DepClassModel >> className: anObject [
+
+	className := anObject
 ]
 
 { #category : #accessing }
@@ -37,5 +38,5 @@ DepClassModel >> methods [
 
 { #category : #accessing }
 DepClassModel >> name [
-	^ '{1} ({2})' format: { aClass name . methods size }
+	^ '{1} ({2})' format: { className . methods size }
 ]
